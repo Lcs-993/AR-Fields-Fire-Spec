@@ -1,22 +1,24 @@
-# AR Fazendas — Sensor Debug
+# AR Fazendas — Fazenda Teste 01
 
-Esta versão é exclusivamente para diagnóstico.
+Versão de teste controlado com uma única fazenda fixa:
 
-Ela NÃO usa GeoJSON e NÃO cria marcadores.
+- Fazenda do Padrinho
+- Latitude: -20.0130583
+- Longitude: -45.9368333
+- Elevação: 730 m
 
-## O que testar
+Objetivo: validar GPS + orientação + cálculo de bearing/distância + posição horizontal do marcador.
 
-1. Publique em HTTPS.
-2. Abra no celular.
-3. Toque em INICIAR DIAGNÓSTICO.
-4. Autorize a câmera e a localização.
-5. Observe os campos GPS.
-6. Observe `eventos recebidos`, `alpha`, `beta`, `gamma` e `absolute`.
-7. Gire lentamente o celular em 360°.
-8. Use COPIAR DIAGNÓSTICO para copiar os resultados.
+Ainda não usa GeoJSON.
 
-## O que enviar depois
+## Teste
 
-Uma captura de tela já é suficiente. Se possível, envie também o texto copiado pelo botão.
+1. Publique no GitHub Pages.
+2. Abra no Chrome do celular via HTTPS.
+3. Toque em INICIAR TESTE.
+4. Autorize câmera e localização.
+5. Gire lentamente o celular.
+6. Observe `Bearing até a fazenda`, `Heading do celular` e `Diferença angular`.
+7. O marcador deve se mover horizontalmente conforme o celular gira.
 
-Não vamos ajustar o cálculo do azimute até verificar os valores brutos entregues pelo aparelho.
+Observação: a projeção atual usa FOV horizontal aproximado de 70° apenas para validar a lógica. Ainda não é a calibração AR final.

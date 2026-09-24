@@ -1,215 +1,173 @@
+const FARM = {
+  nome: "Fazenda do Padrinho",
+  latitude: -20.0130583,
+  longitude: -45.9368333,
+  elevacao: 730
+};
+
+let currentPosition = null;
+let heading = null;
+let orientationEvents = 0;
+
 const $ = id => document.getElementById(id);
 
-let orientationEvents = 0;
-let lastEvent = null;
-let watchId = null;
+$("https").textContent = window.isSecureContext ? "SIM" : "NÃO";
 
-function setText(id, value, cls="") {
-  const el = $(id);
-  el.textContent = value;
-  el.className = cls;
+function normalize360(x) {
+  return (x % 360 + 360) % 360;
 }
 
-function normalizeAngle(v) {
-  return (v % 360 + 360) % 360;
+function angleDiff(a, b) {
+  return ((a - b + 540) % 360) - 180;
 }
 
-function cardinal(deg) {
-  const dirs = ["N","NE","E","SE","S","SW","W","NW"];
-  return dirs[Math.round(deg / 45) % 8];
+function distanceBearing(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const p1 = toRad(lat1), p2 = toRad(lat2);
+  const dLat = toRad(lat2-lat1);
+  const dLon = toRad(lon2-lon1);
+
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(p1)*Math.cos(p2)*Math.sin(dLon/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R*c;
+
+  const y = Math.sin(dLon)*Math.cos(p2);
+  const x = Math.cos(p1)*Math.sin(p2) -
+            Math.sin(p1)*Math.cos(p2)*Math.cos(dLon);
+  const bearing = normalize360(Math.atan2(y,x) * 180/Math.PI);
+
+  return {distance, bearing};
 }
 
-function browserInfo() {
-  const ua = navigator.userAgent;
-  if (/Android/i.test(ua)) return "Android";
-  if (/iPhone|iPad|iPod/i.test(ua)) return "iOS";
-  return "Outro";
+function formatDistance(m) {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(2)} km`;
 }
 
-function inspectEnvironment() {
-  const secure = window.isSecureContext;
-  setText("https", secure ? "SIM" : "NÃO", secure ? "ok" : "error");
-  setText("secure", secure ? "SECURE" : "NÃO SEGURO", secure ? "ok" : "error");
-  setText("browser", browserInfo());
-  setText("orientationApi", typeof DeviceOrientationEvent !== "undefined" ? "SIM" : "NÃO", typeof DeviceOrientationEvent !== "undefined" ? "ok" : "error");
-  setText("geoApi", "geolocation" in navigator ? "SIM" : "NÃO", "geolocation" in navigator ? "ok" : "error");
+function updateFarm() {
+  if (!currentPosition || heading === null) return;
+
+  const {latitude, longitude, accuracy} = currentPosition.coords;
+  const r = distanceBearing(latitude, longitude, FARM.latitude, FARM.longitude);
+  const diff = angleDiff(r.bearing, heading);
+
+  $("farmData").textContent =
+`Coordenada: ${FARM.latitude.toFixed(7)}, ${FARM.longitude.toFixed(7)}
+Elevação: ${FARM.elevacao} m
+Bearing até a fazenda: ${r.bearing.toFixed(1)}°
+Heading do celular: ${heading.toFixed(1)}°
+Diferença angular: ${diff.toFixed(1)}°
+Distância: ${formatDistance(r.distance)}
+Precisão GPS: ${Math.round(accuracy)} m`;
+
+  $("markerDistance").textContent = formatDistance(r.distance);
+  $("marker").classList.remove("hidden");
+
+  // Campo horizontal simples: 70° de FOV aproximado.
+  // É apenas para validar a direção; não representa ainda uma projeção AR calibrada.
+  const fov = 70;
+  let x = 50 + (diff / (fov/2)) * 50;
+  x = Math.max(-20, Math.min(120, x));
+  $("marker").style.left = `${x}%`;
 }
 
-async function inspectPermission() {
-  if (!navigator.permissions?.query) {
-    setText("gpsPermission", "API não disponível", "warn");
-    return;
+function onOrientation(e) {
+  orientationEvents++;
+  let h = null;
+
+  // Android Chrome normalmente fornece alpha como azimute quando absolute=true.
+  if (e.absolute && typeof e.alpha === "number") {
+    h = normalize360(e.alpha);
+  } else if (typeof e.webkitCompassHeading === "number") {
+    h = normalize360(e.webkitCompassHeading);
+  } else if (typeof e.alpha === "number") {
+    h = normalize360(e.alpha);
   }
 
+  if (h !== null) {
+    heading = h;
+    $("orientationStatus").textContent = "OK";
+  }
+
+  $("orientationData").textContent =
+`Eventos: ${orientationEvents}
+absolute: ${e.absolute}
+alpha: ${typeof e.alpha === "number" ? e.alpha.toFixed(2)+"°" : "—"}
+beta: ${typeof e.beta === "number" ? e.beta.toFixed(2)+"°" : "—"}
+gamma: ${typeof e.gamma === "number" ? e.gamma.toFixed(2)+"°" : "—"}
+heading usado: ${heading === null ? "—" : heading.toFixed(1)+"°"}`;
+
+  updateFarm();
+}
+
+async function startOrientation() {
   try {
-    const result = await navigator.permissions.query({name: "geolocation"});
-    setText("gpsPermission", result.state);
-    result.onchange = () => setText("gpsPermission", result.state);
-  } catch {
-    setText("gpsPermission", "não consultável", "warn");
+    if (typeof DeviceOrientationEvent === "undefined") {
+      $("orientationStatus").textContent = "NÃO DISPONÍVEL";
+      return;
+    }
+
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if (permission !== "granted") {
+        $("orientationStatus").textContent = "PERMISSÃO NEGADA";
+        return;
+      }
+    }
+
+    window.addEventListener("deviceorientationabsolute", onOrientation, true);
+    window.addEventListener("deviceorientation", onOrientation, true);
+  } catch (err) {
+    $("orientationStatus").textContent = "ERRO";
+    $("orientationData").textContent = String(err);
   }
 }
 
 async function startCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    setText("cameraStatus", "API NÃO DISPONÍVEL", "error");
-    return;
-  }
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {facingMode: {ideal: "environment"}},
       audio: false
     });
     $("camera").srcObject = stream;
-    setText("cameraStatus", "OK", "ok");
-  } catch (e) {
-    setText("cameraStatus", `${e.name}: ${e.message}`, "error");
+    $("cameraStatus").textContent = "OK";
+  } catch (err) {
+    $("cameraStatus").textContent = "ERRO";
   }
 }
 
 function startGPS() {
   if (!navigator.geolocation) {
-    setText("gpsStatus", "API NÃO DISPONÍVEL", "error");
+    $("gpsStatus").textContent = "NÃO DISPONÍVEL";
     return;
   }
 
-  setText("gpsStatus", "SOLICITANDO…");
-
-  watchId = navigator.geolocation.watchPosition(
+  navigator.geolocation.watchPosition(
     pos => {
-      const c = pos.coords;
-      setText("gpsStatus", "OK", "ok");
-      setText("latitude", Number(c.latitude).toFixed(7), "ok");
-      setText("longitude", Number(c.longitude).toFixed(7), "ok");
-      setText("accuracy", `${Math.round(c.accuracy)} m`, c.accuracy <= 20 ? "ok" : "warn");
-      setText("gpsError", "—");
-      setText("gpsPermission", "concedida", "ok");
-      diagnostic();
+      currentPosition = pos;
+      $("gpsStatus").textContent = "OK";
+      $("gpsData").textContent =
+`Latitude: ${pos.coords.latitude.toFixed(7)}
+Longitude: ${pos.coords.longitude.toFixed(7)}
+Precisão: ${Math.round(pos.coords.accuracy)} m
+Altitude: ${pos.coords.altitude == null ? "—" : pos.coords.altitude.toFixed(1)+" m"}`;
+
+      updateFarm();
     },
     err => {
-      setText("gpsStatus", "ERRO", "error");
-      setText("gpsError", `${err.code} — ${err.message}`, "error");
-      if (err.code === 1) setText("gpsPermission", "negada", "error");
-      diagnostic();
+      $("gpsStatus").textContent = "ERRO";
+      $("gpsData").textContent = `${err.code}: ${err.message}`;
     },
     {enableHighAccuracy:true, maximumAge:1000, timeout:20000}
   );
 }
 
-async function requestOrientationPermission() {
-  if (
-    typeof DeviceOrientationEvent !== "undefined" &&
-    typeof DeviceOrientationEvent.requestPermission === "function"
-  ) {
-    const result = await DeviceOrientationEvent.requestPermission();
-    if (result !== "granted") throw new Error("Permissão de orientação: " + result);
-  }
-}
-
-function handleOrientation(e) {
-  orientationEvents++;
-  lastEvent = e;
-
-  setText("eventCount", String(orientationEvents), "ok");
-  setText("absolute", String(e.absolute));
-  setText("alpha", Number.isFinite(e.alpha) ? `${e.alpha.toFixed(2)}°` : "null");
-  setText("beta", Number.isFinite(e.beta) ? `${e.beta.toFixed(2)}°` : "null");
-  setText("gamma", Number.isFinite(e.gamma) ? `${e.gamma.toFixed(2)}°` : "null");
-
-  setText("orientationStatus", "EVENTOS RECEBIDOS", "ok");
-
-  let h = null;
-
-  if (Number.isFinite(e.webkitCompassHeading)) {
-    h = e.webkitCompassHeading;
-  } else if (Number.isFinite(e.alpha)) {
-    h = 360 - e.alpha;
-  }
-
-  if (Number.isFinite(h)) {
-    h = normalizeAngle(h);
-    setText("heading", `${h.toFixed(1)}°`, "ok");
-    setText("direction", cardinal(h), "ok");
-  } else {
-    setText("heading", "não calculável", "warn");
-    setText("direction", "—", "warn");
-  }
-
-  diagnostic();
-}
-
-async function startOrientation() {
-  if (typeof DeviceOrientationEvent === "undefined") {
-    setText("orientationStatus", "API NÃO DISPONÍVEL", "error");
-    return;
-  }
-
-  try {
-    await requestOrientationPermission();
-  } catch (e) {
-    setText("orientationStatus", e.message, "error");
-    return;
-  }
-
-  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
-  window.addEventListener("deviceorientation", handleOrientation, true);
-
-  setText("orientationStatus", "AGUARDANDO EVENTO…", "warn");
-}
-
-function diagnostic() {
-  if (orientationEvents === 0) {
-    $("diagnostic").textContent = "Nenhum evento de orientação foi recebido ainda.";
-  } else if (watchId === null) {
-    $("diagnostic").textContent = "Orientação respondeu. GPS ainda não foi iniciado.";
-  } else {
-    $("diagnostic").textContent = "Dados recebidos. Não interprete o azimute como definitivo ainda; primeiro vamos validar a rotação do aparelho.";
-  }
-}
-
-async function start() {
+$("startBtn").addEventListener("click", async () => {
   $("startBtn").disabled = true;
-  inspectEnvironment();
-  await inspectPermission();
+  $("startBtn").textContent = "TESTANDO...";
   await startCamera();
   startGPS();
   await startOrientation();
-  diagnostic();
-}
-
-async function copyDiagnostic() {
-  const text = [
-    "AR Fazendas — Sensor Debug",
-    `HTTPS: ${$("https").textContent}`,
-    `Browser: ${$("browser").textContent}`,
-    `Camera: ${$("cameraStatus").textContent}`,
-    `GPS: ${$("gpsStatus").textContent}`,
-    `GPS permission: ${$("gpsPermission").textContent}`,
-    `Latitude: ${$("latitude").textContent}`,
-    `Longitude: ${$("longitude").textContent}`,
-    `Accuracy: ${$("accuracy").textContent}`,
-    `GPS error: ${$("gpsError").textContent}`,
-    `Orientation API: ${$("orientationApi").textContent}`,
-    `Orientation status: ${$("orientationStatus").textContent}`,
-    `Events: ${$("eventCount").textContent}`,
-    `absolute: ${$("absolute").textContent}`,
-    `alpha: ${$("alpha").textContent}`,
-    `beta: ${$("beta").textContent}`,
-    `gamma: ${$("gamma").textContent}`,
-    `heading: ${$("heading").textContent}`,
-    `direction: ${$("direction").textContent}`
-  ].join("\n");
-
-  try {
-    await navigator.clipboard.writeText(text);
-    $("copyBtn").textContent = "COPIADO";
-    setTimeout(() => $("copyBtn").textContent = "COPIAR DIAGNÓSTICO", 1500);
-  } catch {
-    alert(text);
-  }
-}
-
-inspectEnvironment();
-$("startBtn").addEventListener("click", start);
-$("copyBtn").addEventListener("click", copyDiagnostic);
+  $("startBtn").textContent = "TESTE ATIVO";
+});

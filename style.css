@@ -1,0 +1,19 @@
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;color:#fff;font-family:Arial,Helvetica,sans-serif}
+#app{position:relative;width:100%;height:100dvh;overflow:hidden}
+#camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.overlay{position:absolute;inset:0;padding:calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 10px);overflow-y:auto;background:linear-gradient(rgba(0,0,0,.28),rgba(0,0,0,.45))}
+.card{margin-bottom:8px;padding:11px 12px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.14);border-radius:12px;backdrop-filter:blur(7px)}
+.header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:17px} h2{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;opacity:.72}
+p{margin:5px 0 0;font-size:11px;line-height:1.4;opacity:.8}
+.badge{padding:6px 8px;border-radius:8px;background:#555;font-size:10px;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid>div,.line{padding:7px 8px;background:rgba(255,255,255,.055);border-radius:7px}
+.grid span,.line span,.big span{display:block;font-size:9px;opacity:.58}
+.grid b,.line b{display:block;margin-top:3px;font-size:12px;word-break:break-word}
+.line{display:flex;justify-content:space-between;align-items:center}
+.big{text-align:center;padding:8px}.big strong{display:block;margin-top:2px;font-size:27px}
+button{width:100%;padding:13px;margin:0 0 8px;border:0;border-radius:11px;font-weight:800;pointer-events:auto}
+#startBtn{background:#fff;color:#111}.secondary{background:rgba(255,255,255,.18);color:#fff}
+.ok{color:#7deda3!important}.error{color:#ff9696!important}.warn{color:#ffd66e!important}

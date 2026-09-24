@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AR Fazendas — Sensor Debug</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <video id="camera" autoplay playsinline muted></video>
+
+  <div class="overlay">
+    <header class="card header">
+      <div>
+        <h1>AR Fazendas</h1>
+        <p>Diagnóstico bruto dos sensores</p>
+      </div>
+      <span id="secure" class="badge">—</span>
+    </header>
+
+    <section class="card">
+      <h2>Ambiente</h2>
+      <div class="grid">
+        <div><span>HTTPS</span><b id="https">—</b></div>
+        <div><span>Navigator</span><b id="browser">—</b></div>
+        <div><span>DeviceOrientation API</span><b id="orientationApi">—</b></div>
+        <div><span>Geolocation API</span><b id="geoApi">—</b></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Câmera</h2>
+      <div class="line"><span>Status</span><b id="cameraStatus">AGUARDANDO</b></div>
+    </section>
+
+    <section class="card">
+      <h2>GPS</h2>
+      <div class="grid">
+        <div><span>Status</span><b id="gpsStatus">AGUARDANDO</b></div>
+        <div><span>Permissão</span><b id="gpsPermission">—</b></div>
+        <div><span>Latitude</span><b id="latitude">—</b></div>
+        <div><span>Longitude</span><b id="longitude">—</b></div>
+        <div><span>Precisão</span><b id="accuracy">—</b></div>
+        <div><span>Erro</span><b id="gpsError">—</b></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Device Orientation — valores brutos</h2>
+      <div class="grid">
+        <div><span>Eventos recebidos</span><b id="eventCount">0</b></div>
+        <div><span>absolute</span><b id="absolute">—</b></div>
+        <div><span>alpha</span><b id="alpha">—</b></div>
+        <div><span>beta</span><b id="beta">—</b></div>
+        <div><span>gamma</span><b id="gamma">—</b></div>
+      </div>
+      <div class="line"><span>Status</span><b id="orientationStatus">AGUARDANDO</b></div>
+    </section>
+
+    <section class="card">
+      <h2>Interpretação preliminar</h2>
+      <div class="big">
+        <span>Azimute</span>
+        <strong id="heading">—</strong>
+      </div>
+      <div class="big">
+        <span>Direção</span>
+        <strong id="direction">—</strong>
+      </div>
+      <p id="diagnostic">Ainda não iniciado.</p>
+    </section>
+
+    <button id="startBtn">INICIAR DIAGNÓSTICO</button>
+    <button id="copyBtn" class="secondary">COPIAR DIAGNÓSTICO</button>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

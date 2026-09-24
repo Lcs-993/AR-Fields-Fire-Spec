@@ -2,14 +2,15 @@
 html,body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif}
 body{min-height:100vh}
 main{max-width:900px;margin:auto}
-header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.topbar{position:relative;z-index:1000;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#111}
 h1{font-size:18px;margin:0}
-button{border:0;border-radius:8px;padding:11px 14px;font-weight:700}
+#startBtn{position:relative;z-index:1001;pointer-events:auto;touch-action:manipulation;border:0;border-radius:8px;padding:11px 14px;font-weight:700;background:#fff;color:#111;cursor:pointer}
+#startBtn:disabled{opacity:.65;cursor:default}
 .camera-wrap{position:relative;width:100%;height:55vh;min-height:320px;overflow:hidden;background:#222}
-video{width:100%;height:100%;object-fit:cover}
-.overlay{position:absolute;inset:0;pointer-events:none}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.overlay{position:absolute;inset:0;pointer-events:none;z-index:10}
 .center-line{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.45)}
-.marker{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);text-align:center;font-weight:700;text-shadow:0 1px 3px #000;white-space:nowrap}
+.marker{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);text-align:center;font-weight:700;text-shadow:0 1px 3px #000;white-space:nowrap;pointer-events:none}
 .marker-dot{font-size:42px;line-height:38px}
 .marker.hidden{display:none}
 .panel{padding:14px;background:#171717}
@@ -21,4 +22,10 @@ video{width:100%;height:100%;object-fit:cover}
 h2{font-size:14px;margin:16px 0 6px}
 pre{margin:0;background:#0c0c0c;border-radius:8px;padding:10px;white-space:pre-wrap;line-height:1.45}
 .hint{color:#bbb;font-size:13px;line-height:1.4}
-@media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr)}header{align-items:flex-start}.camera-wrap{height:52vh}}
+@media(max-width:600px){
+  .topbar{align-items:center}
+  .topbar h1{font-size:16px}
+  #startBtn{flex:0 0 auto;min-width:130px}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .camera-wrap{height:52vh}
+}

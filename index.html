@@ -8,14 +8,14 @@
 </head>
 <body>
   <main>
-    <header>
+    <header class="topbar">
       <h1>AR Fazendas — Fazenda Teste</h1>
-      <button id="startBtn">INICIAR TESTE</button>
+      <button id="startBtn" type="button">INICIAR TESTE</button>
     </header>
 
     <section id="cameraWrap" class="camera-wrap">
       <video id="camera" autoplay playsinline muted></video>
-      <div class="overlay">
+      <div class="overlay" aria-hidden="true">
         <div id="marker" class="marker hidden">
           <div class="marker-dot">●</div>
           <div id="markerName">Fazenda do Padrinho</div>
@@ -36,10 +36,10 @@
       <h2>GPS</h2>
       <pre id="gpsData">Aguardando...</pre>
 
-      <h2>Bússola / orientação</h2>
+      <h2>BÚSSOLA / ORIENTAÇÃO</h2>
       <pre id="orientationData">Aguardando...</pre>
 
-      <h2>Fazenda do Padrinho</h2>
+      <h2>FAZENDA DO PADRINHO</h2>
       <pre id="farmData">Aguardando GPS...</pre>
 
       <p class="hint">

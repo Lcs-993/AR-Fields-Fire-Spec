@@ -12,14 +12,18 @@ let orientationEvents = 0;
 
 // Filtro visual da orientação.
 // Valores menores = mais estabilidade / menos sensibilidade.
-// O marcador não acompanha cada oscilação bruta do sensor.
-const HEADING_FILTER = 0.08;
-const HEADING_DEAD_ZONE = 0.8;
+const HEADING_FILTER = 0.045;
+
+// Pequenas variações do sensor não movimentam o marcador.
+const HEADING_DEAD_ZONE = 2.5;
+
+// Faixa em torno do centro na qual o marcador fica exatamente centralizado.
+// Isso torna o alinhamento manual muito mais fácil.
+const CENTER_DEAD_ZONE = 3.0;
 
 // Campo horizontal considerado pelo AR.
-// Um campo maior reduz o deslocamento visual causado por pequenas
-// variações de orientação.
-const HORIZONTAL_FOV = 90;
+// Um FOV maior reduz o deslocamento visual para a mesma variação angular.
+const HORIZONTAL_FOV = 120;
 
 const $ = id => document.getElementById(id);
 $("https").textContent = window.isSecureContext ? "SIM" : "NÃO";
@@ -42,6 +46,36 @@ function smoothAngle(current, target, factor){
   }
 
   return normalize360(current + diff * factor);
+}
+
+// Converte alpha/beta/gamma em heading horizontal com compensação de inclinação.
+// A ideia é projetar o eixo superior do telefone no plano horizontal.
+// Assim, inclinar o telefone para cima/baixo não cria artificialmente
+// um deslocamento lateral do marcador.
+function tiltCompensatedHeading(alpha, beta, gamma){
+  const a = alpha * Math.PI / 180;
+  const b = beta * Math.PI / 180;
+  const g = gamma * Math.PI / 180;
+
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const cb = Math.cos(b), sb = Math.sin(b);
+  const cg = Math.cos(g), sg = Math.sin(g);
+
+  // Matriz de rotação da orientação do dispositivo.
+  const m11 = ca * cg - sa * sb * sg;
+  const m21 = sa * cg + ca * sb * sg;
+
+  let h = Math.atan2(m21, m11) * 180 / Math.PI;
+
+  // Ajuste para a rotação atual da tela.
+  const screenAngle =
+    (screen.orientation && typeof screen.orientation.angle === "number")
+      ? screen.orientation.angle
+      : (typeof window.orientation === "number" ? window.orientation : 0);
+
+  h += screenAngle;
+
+  return normalize360(h);
 }
 
 function distanceBearing(lat1,lon1,lat2,lon2){
@@ -79,10 +113,21 @@ Precisão GPS: ${Math.round(accuracy)} m`;
 
   // Converte diferença angular em posição horizontal.
   // -45° = borda esquerda, 0° = centro, +45° = borda direita.
-  let x = 50 + (diff / (HORIZONTAL_FOV / 2)) * 50;
+  // Zona central: dentro dela o marcador permanece exatamente no centro.
+  // Isso evita que o usuário precise "caçar" um ponto instável.
+  let x;
+  if(Math.abs(diff) <= CENTER_DEAD_ZONE){
+    x = 50;
+  }else{
+    const effectiveDiff = diff > 0
+      ? diff - CENTER_DEAD_ZONE
+      : diff + CENTER_DEAD_ZONE;
 
-  // Permite uma pequena margem fora da tela para a saída natural do marcador.
-  x=Math.max(-10,Math.min(110,x));
+    x = 50 + (effectiveDiff / (HORIZONTAL_FOV / 2)) * 50;
+  }
+
+  // Mantém o marcador dentro de uma faixa visível.
+  x = Math.max(5, Math.min(95, x));
 
   $("marker").style.left=`${x}%`;
 }
@@ -92,10 +137,15 @@ function onOrientation(e){
 
   let h=null;
 
-  // No Android/Chrome, alpha é a referência de orientação usada
-  // pelo teste atual. O código não usa beta/gamma para deslocamento X.
-  if(e.absolute && typeof e.alpha==="number"){
-    h=normalize360(e.alpha);
+  // Prioridade: heading calculado com compensação de inclinação.
+  // alpha/beta/gamma são usados em conjunto para que a inclinação
+  // vertical não seja convertida em deslocamento horizontal.
+  if(
+    typeof e.alpha === "number" &&
+    typeof e.beta === "number" &&
+    typeof e.gamma === "number"
+  ){
+    h = tiltCompensatedHeading(e.alpha, e.beta, e.gamma);
   }else if(typeof e.webkitCompassHeading==="number"){
     h=normalize360(e.webkitCompassHeading);
   }else if(typeof e.alpha==="number"){
@@ -114,8 +164,10 @@ absolute: ${e.absolute}
 alpha: ${typeof e.alpha==="number"?e.alpha.toFixed(2)+"°":"—"}
 beta: ${typeof e.beta==="number"?e.beta.toFixed(2)+"°":"—"}
 gamma: ${typeof e.gamma==="number"?e.gamma.toFixed(2)+"°":"—"}
-heading bruto: ${heading===null?"—":heading.toFixed(1)+"°"}
-heading filtrado: ${filteredHeading===null?"—":filteredHeading.toFixed(1)+"°"}`;
+heading compensado bruto: ${heading===null?"—":heading.toFixed(1)+"°"}
+heading filtrado: ${filteredHeading===null?"—":filteredHeading.toFixed(1)+"°"}
+zona central: ±${CENTER_DEAD_ZONE.toFixed(1)}°
+FOV horizontal: ${HORIZONTAL_FOV}°`;
 
   updateFarm();
 }
